@@ -2289,7 +2289,7 @@ function updateGaussianSplatting(model, frameState) {
 
   Matrix4.multiply(
     frameState.camera.viewMatrix,
-    model.modelMatrix,
+    model.sceneGraph._computedModelMatrix,
     scratchSplatMatrix,
   );
 
