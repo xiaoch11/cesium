@@ -117,6 +117,7 @@ function updateAndPushChildren(tile, stack, frameState) {
   for (let i = 0; i < children.length; ++i) {
     const child = children[i];
     if (child.isVisible) {
+      child._gsSortOrder = [...tile._gsSortOrder, i];
       stack.push(child);
       if (child._foveatedFactor < minimumPriority) {
         minIndex = i;
@@ -192,6 +193,7 @@ function executeTraversal(root, frameState) {
   const { canTraverse, loadTile, visitTile, touchTile } =
     Cesium3DTilesetTraversal;
   const stack = traversal.stack;
+  root._gsSortOrder = [];
   stack.push(root);
 
   while (stack.length > 0) {

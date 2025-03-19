@@ -120,6 +120,7 @@ import ModelUtility from "./Model/ModelUtility.js";
  * @property {boolean} [enableCollision=false] When <code>true</code>, enables collisions for camera or CPU picking. While this is <code>true</code> the camera will be prevented from going below the tileset surface if {@link ScreenSpaceCameraController#enableCollisionDetection} is true.
  * @property {boolean} [projectTo2D=false] Whether to accurately project the tileset to 2D. If this is true, the tileset will be projected accurately to 2D, but it will use more memory to do so. If this is false, the tileset will use less memory and will still render in 2D / CV mode, but its projected positions may be inaccurate. This cannot be set after the tileset has been created.
  * @property {boolean} [enablePick=false] Whether to allow collision and CPU picking with <code>pick</code> when using WebGL 1. If using WebGL 2 or above, this option will be ignored. If using WebGL 1 and this is true, the <code>pick</code> operation will work correctly, but it will use more memory to do so. If running with WebGL 1 and this is false, the model will use less memory, but <code>pick</code> will always return <code>undefined</code>. This cannot be set after the tileset has loaded.
+ * @property {boolean} [enableGaussianSplattingSort=false] Whether to sort tiles for gaussian splatting. If true, tiles will be sorted from back to front.
  * @property {string} [debugHeatmapTilePropertyName] The tile variable to colorize as a heatmap. All rendered tiles will be colorized relative to each other's specified variable value.
  * @property {boolean} [debugFreezeFrame=false] For debugging only. Determines if only the tiles from last frame should be used for rendering.
  * @property {boolean} [debugColorizeTiles=false] For debugging only. When true, assigns a random color to each tile.
@@ -1097,6 +1098,11 @@ function Cesium3DTileset(options) {
     instanceFeatureIdLabel = `instanceFeatureId_${instanceFeatureIdLabel}`;
   }
   this._instanceFeatureIdLabel = instanceFeatureIdLabel;
+
+  this._enableGaussianSplattingSort = defaultValue(
+    options.enableGaussianSplattingSort,
+    false,
+  );
 }
 
 Object.defineProperties(Cesium3DTileset.prototype, {
@@ -2994,6 +3000,23 @@ function updateTileDebugLabels(tileset, frameState) {
   tileset._tileDebugLabels.update(frameState);
 }
 
+function backToFrontGS(a, b) {
+  const orderA = a._gsSortOrder;
+  const orderB = b._gsSortOrder;
+  let i = 0;
+  while (i < orderA.length && i < orderB.length) {
+    if (orderA[i] === orderB[i]) {
+      i++;
+    } else {
+      // smaller order, farther from camera, rank ahead
+      return orderA[i] - orderB[i];
+    }
+  }
+
+  // smaller length, lower level, rank ahead
+  return orderA.length - orderB.length;
+}
+
 /**
  * @private
  * @param {Cesium3DTileset} tileset
@@ -3007,6 +3030,10 @@ function updateTiles(tileset, frameState, passOptions) {
   const { commandList, context } = frameState;
   const numberOfInitialCommands = commandList.length;
   const selectedTiles = tileset._selectedTiles;
+  if (tileset._enableGaussianSplattingSort) {
+    // sort tiles from back to front
+    selectedTiles.sort(backToFrontGS);
+  }
 
   const bivariateVisibilityTest =
     tileset.isSkippingLevelOfDetail &&
