@@ -2260,6 +2260,31 @@ function generateSplatTexture(primitive, frameState) {
   });
 }
 
+function detectViewMatrixChanged(model, frameState) {
+  if (
+    frameState.frameNumber === model._updatedViewMatrixFrame &&
+    defined(model._previousViewMatrix)
+  ) {
+    return false;
+  }
+
+  model._updatedViewMatrixFrame = frameState.frameNumber;
+
+  const viewMatrix = frameState.camera.viewMatrix;
+  const viewMatrixChanged = !Matrix4.equals(
+    viewMatrix,
+    model._previousViewMatrix,
+  );
+  if (viewMatrixChanged) {
+    model._previousViewMatrix = Matrix4.clone(
+      viewMatrix,
+      model._previousViewMatrix,
+    );
+  }
+
+  return viewMatrixChanged;
+}
+
 function updateGaussianSplatting(model, frameState) {
   let prim;
   for (let i = 0; i < model.sceneGraph.components.nodes.length; i++) {
@@ -2287,16 +2312,22 @@ function updateGaussianSplatting(model, frameState) {
     return;
   }
 
+  if (!prim?.hasGaussianSplatTexture) {
+    model.resetDrawCommands();
+    return;
+  }
+
+  const viewMatrixChanged = detectViewMatrixChanged(model, frameState);
+
+  if (!viewMatrixChanged && defined(model._previousSortPromise)) {
+    return;
+  }
+
   Matrix4.multiply(
     frameState.camera.viewMatrix,
     model.sceneGraph._computedModelMatrix,
     scratchSplatMatrix,
   );
-
-  if (!prim?.hasGaussianSplatTexture) {
-    model.resetDrawCommands();
-    return;
-  }
 
   const idxAttr = prim.attributes.find((a) => a.name === "_SPLAT_INDEXES");
   const posAttr = ModelUtility.getAttributeBySemantic(
@@ -2324,6 +2355,8 @@ function updateGaussianSplatting(model, frameState) {
     idxAttr.typedArray = sortedData;
     model.resetDrawCommands();
   });
+
+  model._previousSortPromise = promise;
 }
 
 function updateSilhouette(model, frameState) {
