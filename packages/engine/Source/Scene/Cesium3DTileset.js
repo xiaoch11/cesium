@@ -62,6 +62,7 @@ import Cesium3DTilesetBaseTraversal from "./Cesium3DTilesetBaseTraversal.js";
 import Cesium3DTilesetSkipTraversal from "./Cesium3DTilesetSkipTraversal.js";
 import Ray from "../Core/Ray.js";
 import DynamicEnvironmentMapManager from "./DynamicEnvironmentMapManager.js";
+import ModelUtility from "./Model/ModelUtility.js";
 
 /**
  * @typedef {Object} Cesium3DTileset.ConstructorOptions
@@ -2152,6 +2153,12 @@ Cesium3DTileset.fromUrl = async function (url, options) {
   tileset._extensions = tilesetJson.extensions;
   tileset._modelUpAxis = modelUpAxis;
   tileset._modelForwardAxis = modelForwardAxis;
+  // correction matrix for boundingVolumes
+  tileset._axisCorrectionMatrix = ModelUtility.getAxisCorrectionMatrix(
+    modelUpAxis,
+    modelForwardAxis,
+    new Matrix4(),
+  );
 
   tileset._root = tileset.loadTileset(resource, tilesetJson);
 

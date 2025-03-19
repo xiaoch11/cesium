@@ -1863,9 +1863,16 @@ Cesium3DTile.prototype.createBoundingVolume = function (
     );
   }
 
+  const { _axisCorrectionMatrix } = this._tileset;
+  const computedTransform = Matrix4.multiplyTransformation(
+    transform,
+    _axisCorrectionMatrix,
+    new Matrix4(),
+  );
+
   const { box, region, sphere } = boundingVolumeHeader;
   if (defined(box)) {
-    const tileOrientedBoundingBox = createBox(box, transform, result);
+    const tileOrientedBoundingBox = createBox(box, computedTransform, result);
     if (this._verticalExaggeration !== 1.0) {
       exaggerateBoundingBox(
         tileOrientedBoundingBox,
@@ -1878,7 +1885,7 @@ Cesium3DTile.prototype.createBoundingVolume = function (
   if (defined(region)) {
     const tileBoundingVolume = createRegion(
       region,
-      transform,
+      computedTransform,
       this._initialTransform,
       result,
     );
@@ -1907,7 +1914,7 @@ Cesium3DTile.prototype.createBoundingVolume = function (
     return tileBoundingVolume;
   }
   if (defined(sphere)) {
-    const tileBoundingSphere = createSphere(sphere, transform, result);
+    const tileBoundingSphere = createSphere(sphere, computedTransform, result);
     if (this._verticalExaggeration !== 1.0) {
       const exaggeratedCenter = VerticalExaggeration.getPosition(
         tileBoundingSphere.center,
