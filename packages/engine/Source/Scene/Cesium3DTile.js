@@ -2070,6 +2070,30 @@ function applyDebugSettings(tile, tileset, frameState, passOptions) {
     return;
   }
 
+  const debugColorizeTilesOn =
+    (tileset.debugColorizeTiles && !tile._debugColorizeTiles) ||
+    defined(tileset._heatmap.tilePropertyName);
+  const debugColorizeTilesOff =
+    !tileset.debugColorizeTiles && tile._debugColorizeTiles;
+
+  if (debugColorizeTilesOn) {
+    tileset._heatmap.colorize(tile, frameState); // Skipped if tileset._heatmap.tilePropertyName is undefined
+    tile._debugColorizeTiles = true;
+    tile.color = tile._debugColor;
+  } else if (debugColorizeTilesOff) {
+    tile._debugColorizeTiles = false;
+    tile.color = Color.WHITE;
+  }
+
+  if (tile._colorDirty) {
+    tile._colorDirty = false;
+    tile._content.applyDebugSettings(true, tile._color);
+  }
+
+  if (debugColorizeTilesOff) {
+    tileset.makeStyleDirty(); // Re-apply style now that colorize is switched off
+  }
+
   const hasContentBoundingVolume =
     defined(tile._contentHeader) && defined(tile._contentHeader.boundingVolume);
 
@@ -2083,7 +2107,7 @@ function applyDebugSettings(tile, tileset, frameState, passOptions) {
     } else if (!tile.hasRenderableContent) {
       color = Color.DARKGRAY;
     } else {
-      color = Color.WHITE;
+      color = tile.color || Color.WHITE;
     }
     if (!defined(tile._debugBoundingVolume)) {
       tile._debugBoundingVolume = tile._boundingVolume.createDebugVolume(color);
@@ -2127,30 +2151,6 @@ function applyDebugSettings(tile, tileset, frameState, passOptions) {
     defined(tile._debugViewerRequestVolume)
   ) {
     tile._debugViewerRequestVolume = tile._debugViewerRequestVolume.destroy();
-  }
-
-  const debugColorizeTilesOn =
-    (tileset.debugColorizeTiles && !tile._debugColorizeTiles) ||
-    defined(tileset._heatmap.tilePropertyName);
-  const debugColorizeTilesOff =
-    !tileset.debugColorizeTiles && tile._debugColorizeTiles;
-
-  if (debugColorizeTilesOn) {
-    tileset._heatmap.colorize(tile, frameState); // Skipped if tileset._heatmap.tilePropertyName is undefined
-    tile._debugColorizeTiles = true;
-    tile.color = tile._debugColor;
-  } else if (debugColorizeTilesOff) {
-    tile._debugColorizeTiles = false;
-    tile.color = Color.WHITE;
-  }
-
-  if (tile._colorDirty) {
-    tile._colorDirty = false;
-    tile._content.applyDebugSettings(true, tile._color);
-  }
-
-  if (debugColorizeTilesOff) {
-    tileset.makeStyleDirty(); // Re-apply style now that colorize is switched off
   }
 }
 
